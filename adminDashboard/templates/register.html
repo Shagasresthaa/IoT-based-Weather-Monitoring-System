@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>User Registration</title>
+    <link rel="stylesheet" type="text/css" href="/static/css/register.css">
+
+    <!-- Font CDN's -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet">
+
+    <script src="https://kit.fontawesome.com/628503b113.js" crossorigin="anonymous"></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CDN's-->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.5.4/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script type="text/javascript" src="/static/scripts/register.js"></script>
+
+</head>
+<body>
+    <div class="container-fluid">
+        <center><h1>User Registration</h1></center>
+        <form name="login_form" action="{{url_for("registerUser")}}" method="POST">
+            <div class="form-group">
+              <label for="exampleInputEmail1">Name</label>
+              <input type="text" name="name" class="form-control" id="username" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+              <label for="exampleInputEmail1">Email address</label>
+              <input type="email" name="memail" class="form-control" id="emailAddr" aria-describedby="emailHelp" placeholder="Enter email">
+            </div>
+            <div class="form-group">
+              <label for="exampleInputPassword1">Password</label>
+              <input type="password" name="mpasswd" class="form-control" id="passwd" placeholder="Password">
+              <input type="checkbox" onclick="myFunction1()"> Show Password
+            </div>
+            {% with messages = get_flashed_messages() %}
+              {% if messages %}
+              <ul class=flashes>
+                {% for message in messages %}
+                <li class = "messageret">{{ message }}</li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+              {% endwith %}
+              {% block body %}{% endblock %}
+            <button type="submit" class="btn btn-primary">Register</button>
+            <a class="btn btn-secondary lgbtn" href="{{url_for("login")}}">Login</a>
+          </form>
+    </div>
+</body>
+</html>

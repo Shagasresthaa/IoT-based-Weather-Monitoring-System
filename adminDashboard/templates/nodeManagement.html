@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Node Management</title>
+
+    <link rel="stylesheet" type="text/css" href="/static/css/nodeManagement.css">
+
+    <!-- Font CDN's -->
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ubuntu&display=swap" rel="stylesheet">
+
+    <script src="https://kit.fontawesome.com/628503b113.js" crossorigin="anonymous"></script>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CDN's-->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/2.5.4/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light" style="background-color: #1395f1; width: 100%;">
+        <a class="navbar-brand text-wrap" href="#">IoT Weather Node Dashboard v.0.1 (Alpha)</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
+            
+          <li class="nav-item active">
+            <a class="nav-link" href="{{url_for("home")}}">Home</a>
+          </li>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  Node Actions
+                </a>
+                <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+                  <a class="dropdown-item" href="{{url_for("nodeManager")}}">Node Management</a>
+                  <a class="dropdown-item" href="{{url_for("visualizeNodeData")}}">Node Data Visualization</a>
+                  <a class="dropdown-item" href="{{url_for("dataTables")}}">Node Data Tables</a>
+                </div>
+              </li>
+
+            <li class="nav-item">
+              <a class="nav-link" href="#">Credits</a>
+            </li>
+            
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for("logoutUser")}}">Logout</a>
+            </li>
+          </ul>
+        </div>
+      </nav>
+
+      <div class="container-fluid btns">
+        <div class="row">
+          <a class="col btn btn-outline-primary" href="#">User Management</a>
+          <a class="col btn btn-outline-success" href="#">Create Nodes</a>
+          <a class="col btn btn-outline-info" href="#">List Nodes</a>
+          <a class="col btn btn-outline-danger" href="#">Delete Nodes</a>
+        </div>
+      </div>
+
+</body>
+</html>

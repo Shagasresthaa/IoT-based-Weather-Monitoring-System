@@ -1,0 +1,35 @@
+.card-deck{
+    text-align: center;
+    margin: 5vh;
+}
+
+.dropdown-menu > a:hover {
+    border-radius: 5px;
+    background-color: #1395f1;
+}
+
+.wname{
+    font-size: 1.5rem;
+    margin: 0.5%;
+}
+
+.col{
+    margin-left: 10px;
+    margin-right: 10px;
+    text-align: center;
+}
+
+.row{
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+
+.btns{
+    max-width: 50%;
+    position: absolute;
+    top: 50%;
+    left: 25%;
+    margin: -25px 0 0 -25px;
+    text-align: center;
+}
