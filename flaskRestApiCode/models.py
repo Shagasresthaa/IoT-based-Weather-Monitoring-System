@@ -77,3 +77,17 @@ class requestHist(db.Model):
         self.id = id
         self.dtime = dtime
         self.mac_id = mac_id
+
+
+class adminActionHist(db.Model):
+    __tablename__ = "adminActionLogs"
+    rqid = db.Column(db.String(32), primary_key=True)
+    adminId = db.Column(db.String(32))
+    dtime = db.Column(db.DateTime)
+    action = db.Column(db.String(100))
+
+    def __init__(self, rqid, adminId, dtime, action):
+        self.rqid = rqid
+        self.adminId = adminId
+        self.dtime = dtime
+        self.action = action

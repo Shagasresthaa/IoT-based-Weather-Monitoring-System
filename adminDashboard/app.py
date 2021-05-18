@@ -10,9 +10,12 @@ import plotly
 import plotly.graph_objs as go
 import plotly.express as px
 from plotly.subplots import make_subplots
-MODE = True
+from flask_bcrypt import Bcrypt
+
+MODE = False
 
 app = Flask(__name__)
+crypt = Bcrypt(app)
 app.config.from_pyfile('config.py')
 app.permanent_session_lifetime = timedelta(minutes=5)
 
@@ -70,7 +73,11 @@ def checkAuth(mailid, mpasswd):
     url = murl + "authUser/" + mailid + "/" + mpasswd
     dt = rq.get(url)
     rsp = dt.json()
-    return rsp[0]['data']['accept_login_request'], rsp[0]['data']['admin_status'], rsp[0]['data']['name']
+    hashed = str(rsp[0]['data']['atoken'])
+    crthash = hashed.replace('_', '/').encode('utf-8')
+    auth = crypt.check_password_hash(crthash, mpasswd)
+
+    return auth, rsp[0]['data']['admin_status'], rsp[0]['data']['name'], rsp[0]['data']['uid']
 
 
 def userRegistration(name, email, password):
@@ -98,12 +105,13 @@ def login():
     if request.method == "POST":
         email = request.form['memail']
         passwd = request.form['mpasswd']
-        approveLogin, isAdmin, userName = checkAuth(email, passwd)
+        approveLogin, isAdmin, userName, uid = checkAuth(email, passwd)
         if(approveLogin):
             session.permanent = True
             session["user"] = email
             session["isAdmin"] = isAdmin
             session["uname"] = userName
+            session["uid"] = uid
             return redirect(url_for("home"))
 
     else:
@@ -132,6 +140,7 @@ def logoutUser():
     session.pop("user", None)
     session.pop("isAdmin", None)
     session.pop("uname", None)
+    session.pop("uid", None)
     return redirect(url_for("login"))
 
 
@@ -141,8 +150,10 @@ def registerUser():
         name = request.form['name']
         email = request.form['memail']
         passwd = request.form['mpasswd']
-        res = userRegistration(name, email, passwd)
-        print(res)
+        hashed = crypt.generate_password_hash(passwd, 15)
+        hp = hashed.decode("utf-8")
+        fhash = hp.replace('/', '_')
+        res = userRegistration(name, email, fhash)
         if(res == 201):
             flash("Successfully Registered")
             return render_template("index.html")

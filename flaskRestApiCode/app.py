@@ -2,7 +2,7 @@ from flask import Flask, jsonify, render_template
 from flask_restful import Api, Resource
 from flask_sqlalchemy import SQLAlchemy
 from models import (nodeList, Stats, WeatherNodeData,
-                    adminAccessTable, requestHist)
+                    adminAccessTable, requestHist, adminActionHist)
 from models import db as db1
 import json
 import datetime as dt
@@ -43,14 +43,6 @@ class postData(Resource):
 
         else:
             return jsonify({"status_code": 403, "action_status": "Invalid Request"})
-
-
-class postStatus(Resource):
-    def get(self, id, status, mac_id):
-        data = Stats(id, status, mac_id)
-        db.session.add(data)
-        db.session.commit()
-        return jsonify({"status_code": 201, "dev_id": id, "dev_status": status, "dev_mac_id": mac_id, "post_Status": "Successful"})
 
 
 class getStatus(Resource):
@@ -178,6 +170,15 @@ def checkUserCreation(usid, usemail, uspasswd):
     return False
 
 
+def checkUser(uid, email):
+    data = db.session.query(adminAccessTable.id,
+                            adminAccessTable.uemail).filter_by(id=uid, uemail=email).count()
+    print(data)
+    if(data == 0):
+        return True
+    return False
+
+
 class reqIdGen(Resource):
     def get(self, nid, mac_id):
         now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -218,19 +219,59 @@ def checkUserPresence(unames, mailid):
         return True
 
 
-class nodeIdGenerator(Resource):
-    def get(self, loc, mac_id):
+def checkDup(id):
+    data = db.session.query(adminActionHist.rqid).filter_by(rqid=id).count()
+    if(data == 0):
+        return False
+    else:
+        return True
 
+
+def rgen():
+    reqd = idGenerator()
+
+    while(checkDup(reqd)):
+        reqd = idGenerator()
+
+    return reqd
+
+
+def checkIfAdmin(uid):
+    data = db.session.query(adminAccessTable.admin).filter_by(id=uid)
+    for usr in data:
+        if(usr.admin == True):
+            return True
+
+        return False
+
+
+def checkNodeStatusUpdate(nid):
+    data = db.session.query(Stats.status).filter_by(id=nid)
+
+    for node in data:
+        return node.status
+
+
+class nodeIdGenerator(Resource):
+    def get(self, adm_id, loc, mac_id):
+        req = rgen()
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         nodeId = nidGenerator()
 
-        data = nodeList(nodeId, loc, mac_id)
-        db.session.add(data)
-        db.session.commit()
+        if(checkIfAdmin(adm_id)):
+            data = nodeList(nodeId, loc, mac_id)
+            db.session.add(data)
+            dta = Stats(nodeId, "Inactive", mac_id)
+            db.session.add(dta)
 
-        if(checkNodeCreation(nodeId, mac_id)):
-            return jsonify({"status_code": 201, "node_reg_status": "node registered successfully", "assigned_node_id": nodeId})
-        else:
+            if(checkNodeCreation(nodeId, mac_id)):
+                strg = "Node Created " + str(nodeId)
+                data = adminActionHist(req, adm_id, now, strg)
+                db.session.add(data)
+                db.session.commit()
+                return jsonify({"status_code": 201, "node_reg_status": "node registered successfully", "assigned_node_id": nodeId})
             return jsonify({"status_code": 424, "node_reg_status": "node registration failed"})
+        return jsonify({"status_code": 401, "msg": "you are not admin"})
 
 
 class loginManager(Resource):
@@ -238,15 +279,11 @@ class loginManager(Resource):
         data = db.session.query(adminAccessTable.uemail,
                                 adminAccessTable.passwd,
                                 adminAccessTable.nm,
+                                adminAccessTable.id,
                                 adminAccessTable.admin).filter_by(uemail=mail)
 
         for lst in data:
-            if(lst.uemail == mail and lst.passwd == passwd and lst.admin):
-                return jsonify({"status_code": 200, "data": {"auth_status": "authenticated", "name": lst.nm, "admin_status": "True", "accept_login_request": True}}, 200)
-            elif(lst.uemail == mail and lst.passwd == passwd and not lst.admin):
-                return jsonify({"status_code": 200, "data": {"auth_status": "authenticated", "name": lst.nm, "admin_status": "False", "accept_login_request": True}}, 200)
-            else:
-                return jsonify({"status_code": 403, "data": {"auth_status": "not authenticated", "accept_login_request": False}}, 403)
+            return jsonify({"status_code": 200, "data": {"atoken": lst.passwd, "uid": lst.id, "name": lst.nm, "admin_status": lst.admin}}, 200)
 
 
 class registerUser(Resource):
@@ -276,17 +313,155 @@ class listAllNodes(Resource):
         return jsonify({"status_code": 201, "nodes": nodes, "total_nodes": str(nodecount)})
 
 
+class sendUsersList(Resource):
+    def get(self, adm_id):
+        req = rgen()
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if(checkIfAdmin(adm_id)):
+            strg = "User Data List Request"
+            dta = adminActionHist(req, adm_id, now, strg)
+            db.session.add(dta)
+            db.session.commit()
+            data = db.session.query(adminAccessTable.id, adminAccessTable.nm,
+                                    adminAccessTable.uemail, adminAccessTable.admin).order_by(adminAccessTable.id)
+            ulist = []
+
+            for i in data:
+                usr = {'id': str(i.id), 'name': str(i.nm), 'mailid': str(
+                    i.uemail), 'admin_stat': str(i.admin)}
+                ulist.append(usr)
+
+            return jsonify({"status_code": 201, "data": ulist})
+        return jsonify({"status_code": 401, "msg": "you are not admin"})
+
+
+class assignAdmin(Resource):
+    def get(self, adm_id, uid, admstat):
+        req = rgen()
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if(admstat == "True"):
+            astat = True
+        else:
+            astat = False
+        if(checkIfAdmin(adm_id)):
+            usr = db.session.query(adminAccessTable).filter_by(
+                id=uid).first()
+            usr.admin = astat
+            db.session.commit()
+
+            if(checkIfAdmin(uid) == astat):
+                strg = "Admin status update: " + uid + " to " + admstat
+                dta = adminActionHist(req, adm_id, now, strg)
+                db.session.add(dta)
+                db.session.commit()
+                return jsonify({"status_code": 201, "msg": "update successful"})
+            return jsonify({"status_code": 201, "msg": "update failed"})
+
+        return jsonify({"status_code": 401, "msg": "you are not admin"})
+
+
+class updateNodeStatus(Resource):
+    def get(self, adm_id, nid, status):
+        req = rgen()
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if(checkIfAdmin(adm_id)):
+            node = db.session.query(Stats).filter_by(id=nid).first()
+            node.status = status
+            db.session.commit()
+            if(checkNodeStatusUpdate(nid) == status):
+                strg = "Node status update: " + str(nid)
+                dta = adminActionHist(req, adm_id, now, strg)
+                db.session.add(dta)
+                db.session.commit()
+                return jsonify({"status_code": 201, "msg": "node status update successful"})
+            return jsonify({"status_code": 201, "msg": "node status update failed"})
+        return jsonify({"status_code": 404, "msg": "endpoint under construction"})
+
+
+class deleteNode(Resource):
+    def get(self, adm_id, nid, mac_id):
+        req = rgen()
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if(checkIfAdmin(adm_id)):
+            db.session.query(nodeList).filter_by(
+                id=nid, mac_id=mac_id).delete()
+            if(not checkNodeCreation(nid, mac_id)):
+                strg = "Node Deletion " + str(nid)
+                data = adminActionHist(req, adm_id, now, strg)
+                db.session.add(data)
+                db.session.commit()
+                return jsonify({"status_code": 201, "msg": "node deleted successfully"})
+            return jsonify({"status_code": 304, "msg": "node deletetion failed"})
+
+        return jsonify({"status_code": 401, "msg": "you are not admin"})
+
+
+class deleteUser(Resource):
+    def get(self, adm_id, uid, mailid):
+        req = rgen()
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if(checkIfAdmin(adm_id)):
+            db.session.query(adminAccessTable).filter_by(
+                id=uid).delete()
+            if(checkUser(uid, mailid)):
+                strg = "User Deletion " + str(uid)
+                data = adminActionHist(req, adm_id, now, strg)
+                db.session.add(data)
+                db.session.commit()
+                return jsonify({"status_code": 201, "msg": "user deleted successfully"})
+            return jsonify({"status_code": 304, "msg": "user deletetion failed"})
+
+        return jsonify({"status_code": 401, "msg": "you are not admin"})
+
+
+class sendNodeStats(Resource):
+    def get(self, adm_id):
+        req = rgen()
+        now = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        if(checkIfAdmin(adm_id)):
+            strg = "Nodes Status Request"
+            data = adminActionHist(req, adm_id, now, strg)
+            db.session.add(data)
+            db.session.commit()
+            nodes = db.session.query(Stats.id, Stats.status).all()
+            ncount = db.session.query(Stats.id).count()
+            ndata = []
+
+            for node in nodes:
+                txt = {"nid": str(node.id), "status": node.status}
+                ndata.append(txt)
+
+            return jsonify({"status_code": 201, "node_data": ndata, "total_nodes": ncount})
+
+
+class listActiveAndPassiveNodesCount(Resource):
+    def get(self):
+        actNodes = db.session.query(Stats).filter_by(status="active").count()
+        pasNodes = db.session.query(Stats).filter_by(status="inactive").count()
+        return jsonify({"status_code": 200, "active_nodes": actNodes, "inactive_nodes": pasNodes})
+
+
+api.add_resource(listActiveAndPassiveNodesCount, "/getActPasNodeCount")
+api.add_resource(sendNodeStats, "/getAllNodeStats/<string:adm_id>")
+api.add_resource(
+    deleteUser, "/delUser/<string:adm_id>/<string:uid>/<string:mailid>")
+api.add_resource(
+    deleteNode, "/delNode/<string:adm_id>/<int:nid>/<string:mac_id>")
+api.add_resource(updateNodeStatus,
+                 "/updateNodeStatus/<string:adm_id>/<int:nid>/<string:status>")
+api.add_resource(
+    assignAdmin, "/updateAdmin/<string:adm_id>/<string:uid>/<string:admstat>")
+api.add_resource(sendUsersList, "/usersList/<string:adm_id>")
 api.add_resource(listAllNodes, "/getNodes")
 api.add_resource(
     registerUser, "/regUser/<string:name>/<string:mail>/<string:passwd>")
 api.add_resource(loginManager, "/authUser/<string:mail>/<string:passwd>")
-api.add_resource(nodeIdGenerator, "/nodeCreate/<string:loc>/<string:mac_id>")
+api.add_resource(
+    nodeIdGenerator, "/nodeCreate/<string:adm_id>/<string:loc>/<string:mac_id>")
 api.add_resource(reqIdGen, "/getReqIdAuth/<int:nid>/<string:mac_id>")
 api.add_resource(listApiData, "/apiInfo")
 api.add_resource(sendWeatherData, "/getWtData/<int:nid>")
 api.add_resource(getStatus, "/getStatus/<int:nid>")
-api.add_resource(
-    postStatus, "/postStatus/<int:id>/<string:status>/<string:mac_id>")
 api.add_resource(
     postData, "/postData/<string:rqid>/<string:mac_id>/<int:id>/<string:loc>/<string:dtime>/<float:temp>/<float:pres>/<float:humd>/<float:uvid>")
 
