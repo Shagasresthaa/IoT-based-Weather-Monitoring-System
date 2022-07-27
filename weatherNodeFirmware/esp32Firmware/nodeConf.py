@@ -1,5 +1,0 @@
-nodeId = ""
-macId = ""
-loc = ""
-wlanId = ""
-wlanPass = ""
